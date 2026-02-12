@@ -1,0 +1,13 @@
+.features-container{
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+}
+
+.features-title-container{
+    text-align: center;
+    font-size: 60px;
+    width: 100%;
+    background-color: grey;
+}
