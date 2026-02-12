@@ -1,0 +1,130 @@
+.start-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+    background-color: oklch(0.279 0.041 260.031);
+    background-image: url(https://images.unsplash.com/photo-1694701478292-3f…Xx8fHwxNzcwNzQxOTc1fDA&ixlib=rb-4.1.0&q=80&w=1080);
+}
+
+.start-header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 175px;
+    height: 30px;
+    margin-top: 50px;
+    padding: 8px 16px 8px 16px;
+    background-color: oklab(0.623 -0.0378409 -0.210628 / 0.2);
+    border: 1px solid oklab(0.623 -0.0378409 -0.210628 / 0.2);
+    border-radius: 42px;
+}
+
+.start-header-word {
+    font-size: 13px;
+    font-weight: bold;
+    color: oklch(0.707 0.165 254.624);
+}
+
+.start-title {
+    margin-top: 25px;
+    font-size: 70px;
+    font-weight: 850;
+    width: 720px;
+    margin-bottom: 20px;
+    line-height: 70px;
+}
+
+.start-title-info {
+    color: white;
+    text-align: center;
+}
+
+.start-description{
+    width: 670px;
+    text-align: center;
+    font-size: 19px;
+    color: oklch(0.869 0.022 252.894);
+    margin-bottom: 20px;
+}
+
+.start-buttons{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 25px;
+}
+
+.analysis-button{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-right: 20px;
+    width: 175px;
+    height: 48px;
+    border: none;
+    border-radius: 4px;
+    background-color: oklch(0.546 0.245 262.881);
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.analysis-button:hover{
+    background-color: rgb(20, 71, 230);
+}
+
+.analysis-right-arrow{
+    margin-left: 6px;
+    margin-bottom: 3px;
+}
+
+.demo-button{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    margin-right: 20px;
+    width: 175px;
+    height: 48px;
+    border: none;
+    border-radius: 4px;
+    font-size: 18px;
+    font-weight: bold;
+    border: 1px solid oklch(0.446 0.043 257.281);
+}
+
+.demo-button:hover{
+    background-color: oklch(0.279 0.041 260.031);
+}
+
+.start-stats{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 670px;
+    height: 67px;
+    margin-top: 50px;
+    margin-bottom: 100px;
+    color:white;
+}
+
+.accuracy-stat,
+.faster-analysis-stat,
+.corrosion-type-stat{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.main-stat{
+    font-size: 30px;
+    font-weight: 900;
+}
+
+.sub-stat{
+    font-size: 14px;
+    color: oklch(0.704 0.04 256.788);
+}
