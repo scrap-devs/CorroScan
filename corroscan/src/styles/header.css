@@ -7,7 +7,14 @@
   width: 100%;
   position: fixed;
   border-bottom: 0 solid rgba(0, 0, 0, 0.1);
-  background-color: oklab(0.208 -0.00310889 -0.0418848 / 0.95)
+  background-color: oklab(0.208 -0.00310889 -0.0418848 / 0.95);
+  z-index: 1000;
+}
+
+.header a {
+  color: inherit;       /* Use the surrounding text color */
+  text-decoration: none; /* Remove underline */
+  cursor: pointer;       /* Optional: make it look like normal text */
 }
 
 .header-left-section {
@@ -56,4 +63,14 @@
   padding-left: 15px;
   margin-right: 25px;
   font-weight: bold;
+}
+
+@media (max-width: 768px) {
+  .header-middle-section {
+    display: none; /* Hide the links on mobile */
+  }
+
+  .header {
+    padding: 0 15px; /* Reduce padding so it doesn't feel cramped */
+  }
 }

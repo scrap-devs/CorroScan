@@ -1,13 +1,133 @@
-.features-container{
+.features-container {
     display: flex;
     flex-direction: column;
     width: 100%;
     align-items: center;
 }
 
-.features-title-container{
+.features-title-container {
     text-align: center;
-    font-size: 60px;
+    font-size: 48px;
     width: 100%;
-    background-color: grey;
+    font-weight: 700;
+    margin-bottom: 5px;
+    margin-top: 10px;
 }
+
+.features-subtitle {
+    color: rgb(69, 85, 108);
+    margin-bottom: 50px;
+    text-align: center;
+}
+
+.features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    column-gap: 40px;
+    row-gap: 40px;
+    margin-bottom: 80px;
+}
+
+/* start.css or features.css */
+.fade-in-text {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 1.2s ease-out, transform 1.2s ease-out;
+}
+
+/* This class is added by JavaScript when you scroll to it */
+.fade-in-text.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+#features {
+  scroll-margin-top: 50px; 
+}
+
+#features::before {
+  content: "";
+  display: block;
+  height: 80px; /* Header height */
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.features-image-analysis-card,
+.features-processing-card,
+.features-reporting-card,
+.features-quality-assurance-card,
+.features-multi-scale-analysis-card,
+.features-ml-powered-card {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+    height: 200px;
+    box-shadow: 1px 2px 5px rgba(0, 0, 0, 0.15);
+    border-radius: 20px;
+    background-color: rgb(255, 255, 255);
+    padding: 40px;
+}
+
+.features-card-title {
+    font-size: 20px;
+    margin-bottom: 18px;
+    font-weight: bold;
+    color: oklch(0.208 0.042 265.755);
+}
+
+.features-card-info{
+    font-size: 16px;
+    color: oklch(0.446 0.043 257.281);
+}
+
+.features-icon-container{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 50px;
+    width: 50px;
+    background-color: oklch(0.932 0.032 255.585);
+    border-radius: 10px;
+    margin-bottom: 30px;
+}
+
+.features-icon{
+    height: 40px;
+    width: 40px;
+    filter: brightness(0) saturate(100%);
+}
+
+
+/* 1. Phone (1 Column) */
+@media (min-width: 320px) {
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .features-subtitle{
+    width: 400px;
+  }
+}
+
+/* 2. Tablet (2 Columns) */
+@media (min-width: 768px) {
+  .features-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .features-subtitle{
+    width: 600px;
+  }
+
+}
+
+/* 3. Desktop (3 Columns) */
+@media (min-width: 1024px) {
+  .features-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
