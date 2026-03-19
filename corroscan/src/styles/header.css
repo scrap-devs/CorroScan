@@ -45,7 +45,6 @@
 
 .header-right-section {
   display: flex;
-  justify-content: end;
   width: 300px;
   color: white;
 }
@@ -53,11 +52,11 @@
 .header-start {
   display: flex;
   align-items: center;
-  ;
   height: 15px;
   background-color: oklch(0.546 0.245 262.881);
   border-radius: 8px;
-  color: white;
+  color: white !important;
+  text-decoration: none !important;
   padding: 10px;
   padding-right: 15px;
   padding-left: 15px;
