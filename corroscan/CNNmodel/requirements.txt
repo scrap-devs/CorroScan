@@ -1,0 +1,14 @@
+# CorroScan CNN — Python dependencies
+# Install everything with:  pip install -r requirements.txt
+
+torch           # deep learning framework (CNN training + inference)
+torchvision     # pretrained EfficientNet-B0 model + image transforms
+opencv-python   # image processing: scale bar detection, corrosion segmentation
+pillow          # image loading for PyTorch datasets
+pandas          # loading the labels CSV
+scikit-learn    # train/test split, classification metrics
+matplotlib      # training history plot
+pytesseract     # OCR wrapper for reading scale bar text (e.g. "150 µm")
+                # Also requires Tesseract-OCR installed as a program:
+                # Windows: https://github.com/UB-Mannheim/tesseract/wiki
+                # Then set TESSERACT_CMD in train.py to the exe path
