@@ -185,10 +185,12 @@ const Extraction = () => {
                     <div className="stat-card">
                       <div className="stat-value">{results.corroded_px.toLocaleString()}</div>
                       <div className="stat-label">Corroded Pixels</div>
+                      <div className="stat-note">excl. background</div>
                     </div>
                     <div className="stat-card">
                       <div className="stat-value">{results.corroded_pct}%</div>
-                      <div className="stat-label">Image Corroded</div>
+                      <div className="stat-label">Sample Area Corroded</div>
+                      <div className="stat-note">excl. background</div>
                     </div>
                   </div>
                 </div>

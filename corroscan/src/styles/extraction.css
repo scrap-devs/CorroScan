@@ -219,6 +219,12 @@
   margin-top: 4px;
 }
 
+.stat-note {
+  font-size: 10px;
+  color: #555870;
+  margin-top: 2px;
+}
+
 /* ── Probability bars ────────────────────────────────────────────────── */
 
 .prob-section {

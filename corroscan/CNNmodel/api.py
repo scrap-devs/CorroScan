@@ -133,6 +133,7 @@ def analyze():
             "probabilities": result["probabilities"],
             "corroded_px":  result["corroded_px"],
             "corroded_pct": result["corroded_pct"],
+            "sample_px":    result["sample_px"],
             "images":       imgs,
         })
     except Exception as e:

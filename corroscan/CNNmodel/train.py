@@ -236,10 +236,10 @@ def estimate_corroded_area(image_bgr: np.ndarray):
     corr_mask = filtered
 
     corroded_px  = int(np.sum(corr_mask > 0))
-    total_px     = h * w
-    pct_of_image = round(100.0 * corroded_px / total_px, 2)
+    sample_px    = int(np.sum(sample_mask > 0))
+    pct_of_sample = round(100.0 * corroded_px / max(sample_px, 1), 2)
 
-    return corroded_px, pct_of_image
+    return corroded_px, pct_of_sample, sample_px
 
 
 # ── DATASET ───────────────────────────────────────────────────────────────────
@@ -382,7 +382,7 @@ def predict_image(image_path: str, model: nn.Module, device: str, img_size: int 
         raise FileNotFoundError(f"Cannot open: {image_path}")
 
     # Corrosion area
-    corroded_px, corroded_pct = estimate_corroded_area(img_bgr)
+    corroded_px, corroded_pct, sample_px = estimate_corroded_area(img_bgr)  # sample_px excludes black background
 
     # Classification
     tf = transforms.Compose([
@@ -404,7 +404,8 @@ def predict_image(image_path: str, model: nn.Module, device: str, img_size: int 
         "confidence":    float(probs[pred]),
         "probabilities": {IDX_TO_LBL[i]: float(p) for i, p in enumerate(probs)},
         "corroded_px":   corroded_px,
-        "corroded_pct":  corroded_pct,
+        "corroded_pct":  corroded_pct,   # % of sample area only (excludes black background)
+        "sample_px":     sample_px,
     }
 
 
