@@ -198,6 +198,26 @@ const Extraction = () => {
       pdf.text(`  ${lbl}: ${(prob * 100).toFixed(1)}%`, margin, y); y += 5
     }); y += 5
 
+    // Depth distribution
+    if (results.depth?.hist_img) {
+      if (y + 10 > pageH - margin) { pdf.addPage(); y = margin }
+      pdf.setFontSize(14); pdf.setTextColor(20, 20, 20)
+      pdf.text('Pit Depth Distribution', margin, y); y += 6
+      pdf.setFontSize(9); pdf.setTextColor(100, 100, 100)
+      pdf.text(
+        `Max depth: ${pixelsPerUnit ? (results.depth.max_depth_px / pixelsPerUnit).toFixed(2) + ' ' + scaleUnit : results.depth.max_depth_px.toFixed(1) + ' px'}   ` +
+        `Mean depth: ${pixelsPerUnit ? (results.depth.mean_depth_px / pixelsPerUnit).toFixed(2) + ' ' + scaleUnit : results.depth.mean_depth_px.toFixed(1) + ' px'}`,
+        margin, y
+      ); y += 5
+      pdf.setFontSize(8); pdf.setTextColor(140, 140, 140)
+      pdf.text('Continuous KDE probability distribution of pit depth from the nearest metal surface.', margin, y); y += 6
+      const chartW = pageW - margin * 2
+      const chartH = chartW * 0.5
+      if (y + chartH > pageH - margin) { pdf.addPage(); y = margin }
+      pdf.addImage(`data:image/jpeg;base64,${results.depth.hist_img}`, 'JPEG', margin, y, chartW, chartH)
+      y += chartH + 8
+    }
+
     pdf.setDrawColor(200, 200, 200)
     pdf.line(margin, y, pageW - margin, y); y += 8
 
@@ -379,6 +399,15 @@ const Extraction = () => {
                         <div className="stat-note">from scale bar</div>
                       </div>
                     )}
+                    <div className="stat-card">
+                      <div className="stat-value">
+                        {pixelsPerUnit
+                          ? `${(results.depth.max_depth_px / pixelsPerUnit).toFixed(2)} ${scaleUnit}`
+                          : `${results.depth.max_depth_px.toFixed(1)} px`}
+                      </div>
+                      <div className="stat-label">Max Pit Depth</div>
+                      <div className="stat-note">from surface</div>
+                    </div>
                   </div>
                 </div>
 
@@ -402,6 +431,10 @@ const Extraction = () => {
                       <span className="stat-explanation-text">Real-world area calculated from the scale bar you drew. Based on {pixelsPerUnit.toFixed(2)} px/{scaleUnit}.</span>
                     </div>
                   )}
+                  <div className="stat-explanation-row">
+                    <span className="stat-explanation-label">Max Pit Depth</span>
+                    <span className="stat-explanation-text">The deepest corrosion pit measured from the nearest metal surface edge using a distance transform.</span>
+                  </div>
                 </div>
 
                 {/* Probability bars */}
@@ -423,6 +456,25 @@ const Extraction = () => {
                     </div>
                   ))}
                 </div>
+
+                {/* Depth distribution */}
+                {results.depth?.hist_img && (
+                  <div className="depth-section">
+                    <h2 className="transforms-title">Pit Depth Distribution</h2>
+                    <p className="depth-desc">
+                      Continuous probability distribution of corrosion pit depth across all detected pit pixels.
+                      Depth is measured from the nearest metal surface using a distance transform.
+                      {pixelsPerUnit
+                        ? ` Scale applied: x-axis values × ${(1/pixelsPerUnit).toFixed(4)} = depth in ${scaleUnit}.`
+                        : ' Draw a scale bar above to convert to real units.'}
+                    </p>
+                    <img
+                      src={`data:image/jpeg;base64,${results.depth.hist_img}`}
+                      alt="Depth distribution"
+                      className="depth-chart-img"
+                    />
+                  </div>
+                )}
 
                 {/* Transformed images */}
                 <h2 className="transforms-title">Image Analysis</h2>

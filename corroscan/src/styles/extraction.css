@@ -493,3 +493,23 @@
 .stat-card.highlight {
   border-color: oklch(0.546 0.245 262.881);
 }
+
+/* ── Depth distribution ──────────────────────────────────────────────── */
+
+.depth-section {
+  margin-bottom: 32px;
+}
+
+.depth-desc {
+  font-size: 13px;
+  color: #8b8fa8;
+  margin: 0 0 14px 0;
+  line-height: 1.6;
+}
+
+.depth-chart-img {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #2e3147;
+  display: block;
+}
