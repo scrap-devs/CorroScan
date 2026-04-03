@@ -308,3 +308,188 @@
   font-weight: 700;
   color: #c0c4d6;
 }
+
+/* ── Image + canvas wrapper ──────────────────────────────────────────── */
+
+.image-canvas-wrapper {
+  position: relative;
+  width: 100%;
+  border-radius: 14px;
+  overflow: hidden;
+  line-height: 0;
+}
+
+.scale-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  pointer-events: none;
+}
+
+.scale-canvas.active {
+  cursor: crosshair;
+  pointer-events: all;
+}
+
+/* ── Scale bar tool ──────────────────────────────────────────────────── */
+
+.scale-tool {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scale-toggle-btn {
+  align-self: flex-start;
+  padding: 9px 20px;
+  background-color: #1a1f2e;
+  border: 1px solid #2e3147;
+  border-radius: 8px;
+  color: #c0c4d6;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.scale-toggle-btn:hover,
+.scale-toggle-btn.active {
+  border-color: #facc15;
+  color: #facc15;
+}
+
+.scale-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #1a1f2e;
+  border: 1px solid #2e3147;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.scale-instruction {
+  font-size: 13px;
+  color: #8b8fa8;
+}
+
+.scale-px-label {
+  font-size: 12px;
+  color: #facc15;
+}
+
+.scale-value-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: #c0c4d6;
+}
+
+.scale-value-input {
+  width: 90px;
+  padding: 7px 10px;
+  background-color: #0f1117;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.scale-unit-select {
+  padding: 7px 10px;
+  background-color: #0f1117;
+  border: 1px solid #2e3147;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+}
+
+.apply-scale-btn {
+  padding: 7px 18px;
+  background-color: oklch(0.546 0.245 262.881);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.apply-scale-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.scale-set-label {
+  font-size: 12px;
+  color: #22c55e;
+  font-weight: 700;
+}
+
+/* ── Action row ──────────────────────────────────────────────────────── */
+
+.action-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.change-btn {
+  padding: 14px 28px;
+  background-color: #1a1f2e;
+  border: 1px solid #2e3147;
+  color: #c0c4d6;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* ── Stat explanations ───────────────────────────────────────────────── */
+
+.stat-explanations {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 24px;
+  background-color: #1a1f2e;
+  border: 1px solid #2e3147;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.stat-explanation-row {
+  display: flex;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.stat-explanation-label {
+  min-width: 160px;
+  font-weight: 700;
+  color: #c0c4d6;
+}
+
+.stat-explanation-text {
+  color: #8b8fa8;
+}
+
+/* ── Prob header ─────────────────────────────────────────────────────── */
+
+.prob-header-text {
+  font-size: 12px;
+  color: #8b8fa8;
+  margin-bottom: 4px;
+}
+
+/* ── Highlighted stat card ───────────────────────────────────────────── */
+
+.stat-card.highlight {
+  border-color: oklch(0.546 0.245 262.881);
+}

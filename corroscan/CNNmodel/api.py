@@ -145,5 +145,5 @@ def analyze():
 if __name__ == "__main__":
     print("Loading model...")
     get_model()
-    print("API ready → http://localhost:5000")
+    print("API ready at http://localhost:5000")
     app.run(debug=False, port=5000)
