@@ -81,8 +81,8 @@
 
 .drop-preview {
   width: 100%;
-  max-height: 420px;
-  object-fit: contain;
+  height: auto;
+  display: block;
   border-radius: 14px;
 }
 

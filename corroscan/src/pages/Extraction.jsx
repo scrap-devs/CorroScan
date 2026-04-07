@@ -71,8 +71,10 @@ const Extraction = () => {
         ctx.lineTo(cx - Math.cos(angle)*capLen/2, cy - Math.sin(angle)*capLen/2)
         ctx.stroke()
       })
-      // Label
-      const px = Math.round(Math.hypot(x2-x1, y2-y1))
+      // Label — show actual image pixels, not display pixels
+      const img2 = imgRef.current
+      const scaleX2 = img2 ? img2.naturalWidth / img2.clientWidth : 1
+      const px = Math.round(Math.hypot(x2-x1, y2-y1) * scaleX2)
       ctx.fillStyle = '#facc15'
       ctx.font = 'bold 13px sans-serif'
       ctx.fillText(`${px}px`, (x1+x2)/2 + 6, (y1+y2)/2 - 6)
@@ -316,7 +318,7 @@ const Extraction = () => {
                   {scaleLine && (
                     <>
                       <span className="scale-px-label">
-                        Line: {Math.round(Math.hypot(scaleLine.x2 - scaleLine.x1, scaleLine.y2 - scaleLine.y1))} px (display) drawn
+                        Line: {imgRef.current ? Math.round(Math.hypot(scaleLine.x2 - scaleLine.x1, scaleLine.y2 - scaleLine.y1) * (imgRef.current.naturalWidth / imgRef.current.clientWidth)) : Math.round(Math.hypot(scaleLine.x2 - scaleLine.x1, scaleLine.y2 - scaleLine.y1))} px drawn
                       </span>
                       <div className="scale-value-row">
                         <span>This line =</span>
