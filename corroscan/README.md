@@ -1,16 +1,51 @@
-# React + Vite
+# CorroScan
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Corrosion severity analysis tool for optical microscopy images. Upload a microscope image, and CorroScan classifies corrosion severity, segments corroded area, and produces a pit depth probability distribution.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Layer | Technology |
+|---|---|
+| Frontend | React 19 + Vite |
+| Backend | Python + Flask |
+| Model | EfficientNet-B0 (PyTorch) fine-tuned on pitting corrosion data |
+| Image processing | OpenCV, NumPy, SciPy |
 
-## React Compiler
+## Running locally
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Python backend
 
-## Expanding the ESLint configuration
+```bash
+cd corroscan/CNNmodel
+pip install -r requirements.txt
+python api.py
+# API available at http://localhost:5000
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+> Requires a trained model at `corroscan/CNNmodel/best_model.pth`. Run `train.py` first if you don't have one.
+
+### 2. React frontend
+
+```bash
+cd corroscan
+npm install
+npm run dev
+# App available at http://localhost:5173
+```
+
+## Features
+
+- **Severity classification** — CNN classifies images as Low or High corrosion severity with confidence scores
+- **Corroded area** — pixel-level segmentation of corrosion pits, excluding black backgrounds
+- **Scale bar tool** — draw over the image's scale bar to convert pixel measurements to real-world units (µm, mm, nm)
+- **Pit depth distribution** — KDE probability curve of pit depth estimated from local intensity contrast (darker pit = deeper)
+- **PDF export** — full report including stats, probability bars, depth distribution chart, and processed images
+
+## Output
+
+- Severity label + confidence
+- Corroded pixel count and percentage of sample area
+- Corroded area in real-world units (requires scale bar)
+- Max and mean pit depth
+- Pit depth KDE distribution plot
+- Processed image views: original, grayscale, corrosion overlay, mask, edge detection

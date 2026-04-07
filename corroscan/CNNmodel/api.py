@@ -91,7 +91,7 @@ def _get_masks(img_bgr: np.ndarray):
             continue
         filtered[lbl_map == lbl] = 255
 
-    return smask, filtered, gray
+    return smask, filtered, gray, pit_map
 
 
 def build_transforms(img_bgr: np.ndarray, smask, cmask, gray) -> dict:
@@ -112,13 +112,15 @@ def build_transforms(img_bgr: np.ndarray, smask, cmask, gray) -> dict:
     return images
 
 
-def compute_depth_stats(smask, cmask) -> dict:
+def compute_depth_stats(smask, cmask, pit_map) -> dict:
     """
-    Measure corrosion pit depth using a distance transform.
+    Estimate corrosion pit depth from local intensity contrast.
 
-    Each pixel in the sample mask is assigned its distance to the nearest
-    sample edge (the metal surface). Pit pixels deeper inside the material
-    get higher values — this is their depth from the surface.
+    pit_map[x,y] = max(0, local_background[x,y] - gray[x,y]) — how much
+    darker each pixel is compared to its surroundings. Deeper pits scatter
+    less light and appear darker, so a higher pit_map value means a deeper
+    pit. Values are in intensity units (0-255); convert to real-world depth
+    using the scale bar (intensity units / px per µm ≈ µm).
 
     The probability distribution is a smooth KDE curve (kernel density
     estimate), giving a continuous distribution of depth across all pit
@@ -133,9 +135,8 @@ def compute_depth_stats(smask, cmask) -> dict:
             "hist_img":      None,
         }
 
-    # Distance transform — depth of each sample pixel from nearest surface
-    dist       = cv2.distanceTransform(smask, cv2.DIST_L2, 5)
-    pit_depths = dist[cmask > 0].astype(float)
+    # Depth proxy: darkness of pit pixel relative to local surface background
+    pit_depths = pit_map[cmask > 0].astype(float)
 
     # Subsample for KDE if too many points (keeps it fast)
     if len(pit_depths) > 50_000:
@@ -161,7 +162,7 @@ def compute_depth_stats(smask, cmask) -> dict:
     ax.axvline(mean_depth, color="#60a5fa", linestyle="--", linewidth=2,
                label=f"Mean depth: {mean_depth:.1f} px")
 
-    ax.set_xlabel("Depth from surface (px)", color="#c0c4d6", fontsize=11)
+    ax.set_xlabel("Depth from surface (intensity units)", color="#c0c4d6", fontsize=11)
     ax.set_ylabel("Probability density",     color="#c0c4d6", fontsize=11)
     ax.set_title("Corrosion Pit Depth Distribution",
                  color="#ffffff", fontsize=13, pad=10)
@@ -207,9 +208,9 @@ def analyze():
         result = predict_image(tmp_path, model, CONFIG["device"])
         img    = cv2.imread(tmp_path)
 
-        smask, cmask, gray = _get_masks(img)
-        imgs               = build_transforms(img, smask, cmask, gray)
-        depth              = compute_depth_stats(smask, cmask)
+        smask, cmask, gray, pit_map = _get_masks(img)
+        imgs                        = build_transforms(img, smask, cmask, gray)
+        depth                       = compute_depth_stats(smask, cmask, pit_map)
 
         return jsonify({
             "severity":      result["severity"],
