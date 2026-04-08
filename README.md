@@ -19,7 +19,8 @@ React frontend (Vite)
             │     EfficientNet-B0 → severity + confidence
             │
             ├── OpenCV segmentation
-            │     local contrast → corroded px + % of image
+            │     Otsu threshold + convex hull + distance transform
+            │     → corroded px, % of sample, pit depth KDE (pixels)
             │
             └── Image transforms
                   original, grayscale, corrosion overlay,
@@ -40,7 +41,7 @@ You need **two terminals open at the same time**.
 ### Prerequisites
 - Python 3.9+
 - Node.js 18+
-- Tesseract OCR → https://github.com/UB-Mannheim/tesseract/wiki
+- Tesseract OCR *(optional)* → https://github.com/UB-Mannheim/tesseract/wiki — used for automatic scale bar reading; falls back to px² without it
 
 ### 1. Install dependencies
 
@@ -81,7 +82,7 @@ npm run dev
 
 Runs on `http://localhost:5173`
 
-Open the browser, click **Get Started**, drop in an image and hit **Analyse Image**.
+Open the browser, click **Start Analysis**, drop in an image and hit **Analyse Image**.
 
 ---
 

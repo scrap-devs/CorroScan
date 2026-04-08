@@ -23,9 +23,10 @@ const Extraction = () => {
   const [drawing,       setDrawing]       = useState(false)
   const [drawStart,     setDrawStart]     = useState(null)
 
-  const inputRef  = useRef(null)
-  const canvasRef = useRef(null)
-  const imgRef    = useRef(null)
+  const inputRef     = useRef(null)
+  const canvasRef    = useRef(null)   // scale-bar overlay canvas
+  const imgRef       = useRef(null)
+  const depthCanvas  = useRef(null)   // depth chart canvas
 
   const handleFile = (file) => {
     if (!file || !file.type.startsWith('image/')) {
@@ -81,6 +82,128 @@ const Extraction = () => {
     }
   }, [scaleLine])
 
+  // Redraw depth chart whenever data or scale changes
+  useEffect(() => {
+    const canvas = depthCanvas.current
+    if (!canvas || !results?.depth?.kde_x?.length) return
+
+    const ppu   = pixelsPerUnit || null
+    const unit  = ppu ? scaleUnit : 'px'
+    const kdeX  = results.depth.kde_x.map(v => ppu ? v / ppu : v)
+    const rawY  = results.depth.kde_y
+    const maxD  = ppu ? results.depth.max_depth_px / ppu : results.depth.max_depth_px
+    const meanD = ppu ? results.depth.mean_depth_px / ppu : results.depth.mean_depth_px
+    const fmt   = v => ppu ? v.toFixed(3) : v.toFixed(1)
+
+    // Normalise Y to 0–1 so axis labels are always clean
+    const rawYMax = Math.max(...rawY)
+    const kdeY    = rawY.map(v => v / rawYMax)
+
+    const W = canvas.width  = 700
+    const H = canvas.height = 280
+    const ml = 58, mr = 24, mt = 36, mb = 52
+    const cW = W - ml - mr
+    const cH = H - mt - mb
+
+    const xMax = Math.max(...kdeX)
+    const toX  = v => ml + (v / xMax) * cW
+    const toY  = v => mt + cH - v * cH   // kdeY is already 0–1
+
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, W, H)
+
+    // Backgrounds
+    ctx.fillStyle = '#0f1117'; ctx.fillRect(0, 0, W, H)
+    ctx.fillStyle = '#1a1f2e'; ctx.fillRect(ml, mt, cW, cH)
+
+    // Grid lines
+    ctx.strokeStyle = '#2e3147'; ctx.lineWidth = 1
+    for (let i = 1; i <= 4; i++) {
+      const gy = mt + (cH * i) / 4
+      ctx.beginPath(); ctx.moveTo(ml, gy); ctx.lineTo(ml + cW, gy); ctx.stroke()
+    }
+
+    // Fill area
+    ctx.beginPath()
+    ctx.moveTo(toX(kdeX[0]), toY(0))
+    kdeX.forEach((x, i) => ctx.lineTo(toX(x), toY(kdeY[i])))
+    ctx.lineTo(toX(kdeX[kdeX.length - 1]), toY(0))
+    ctx.closePath()
+    ctx.fillStyle = 'rgba(239,68,68,0.28)'; ctx.fill()
+
+    // Curve line
+    ctx.beginPath()
+    kdeX.forEach((x, i) => i === 0 ? ctx.moveTo(toX(x), toY(kdeY[i])) : ctx.lineTo(toX(x), toY(kdeY[i])))
+    ctx.strokeStyle = '#ef4444'; ctx.lineWidth = 2.5; ctx.stroke()
+
+    // Dashed vertical lines
+    ctx.setLineDash([5, 4]); ctx.lineWidth = 1.5
+    ctx.strokeStyle = '#facc15'
+    ctx.beginPath(); ctx.moveTo(toX(maxD), mt); ctx.lineTo(toX(maxD), mt + cH); ctx.stroke()
+    ctx.strokeStyle = '#60a5fa'
+    ctx.beginPath(); ctx.moveTo(toX(meanD), mt); ctx.lineTo(toX(meanD), mt + cH); ctx.stroke()
+    ctx.setLineDash([])
+
+    // Vertical line labels — flip to left if too close to right edge
+    ctx.font = 'bold 11px sans-serif'
+    const labelPad = 5
+    const labelRows = [
+      { x: toX(maxD),  text: `Max: ${fmt(maxD)} ${unit}`,  color: '#facc15', row: 0 },
+      { x: toX(meanD), text: `Mean: ${fmt(meanD)} ${unit}`, color: '#60a5fa', row: 1 },
+    ]
+    labelRows.forEach(({ x, text, color, row }) => {
+      ctx.fillStyle = color
+      const tw = ctx.measureText(text).width
+      const lx = x + tw + labelPad > ml + cW ? x - tw - labelPad : x + labelPad
+      ctx.textAlign = x + tw + labelPad > ml + cW ? 'right' : 'left'
+      ctx.fillText(text, lx, mt + 14 + row * 16)
+    })
+    ctx.textAlign = 'left'
+
+    // Axis lines
+    ctx.strokeStyle = '#4a4f6a'; ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.moveTo(ml, mt); ctx.lineTo(ml, mt + cH); ctx.lineTo(ml + cW, mt + cH)
+    ctx.stroke()
+
+    // X ticks + labels
+    const nXTicks = 6
+    ctx.fillStyle = '#8b8fa8'; ctx.font = '11px sans-serif'; ctx.textAlign = 'center'
+    for (let i = 0; i <= nXTicks; i++) {
+      const v  = (xMax * i) / nXTicks
+      const cx = toX(v)
+      ctx.strokeStyle = '#8b8fa8'; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(cx, mt + cH); ctx.lineTo(cx, mt + cH + 4); ctx.stroke()
+      ctx.fillText(ppu ? v.toFixed(2) : Math.round(v), cx, mt + cH + 16)
+    }
+
+    // Y ticks + labels (0, 0.25, 0.5, 0.75, 1)
+    ctx.textAlign = 'right'; ctx.font = '11px sans-serif'; ctx.fillStyle = '#8b8fa8'
+    for (let i = 0; i <= 4; i++) {
+      const v  = i / 4
+      const cy = toY(v)
+      ctx.strokeStyle = '#8b8fa8'; ctx.lineWidth = 1
+      ctx.beginPath(); ctx.moveTo(ml - 4, cy); ctx.lineTo(ml, cy); ctx.stroke()
+      ctx.fillText(v.toFixed(2), ml - 7, cy + 4)
+    }
+
+    // Axis labels
+    ctx.fillStyle = '#c0c4d6'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText(`Depth from undamaged surface (${unit})`, ml + cW / 2, H - 4)
+
+    // Y axis label (rotated)
+    ctx.save()
+    ctx.translate(12, mt + cH / 2)
+    ctx.rotate(-Math.PI / 2)
+    ctx.fillStyle = '#c0c4d6'; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText('Relative density', 0, 0)
+    ctx.restore()
+
+    // Title
+    ctx.fillStyle = '#ffffff'; ctx.font = 'bold 13px sans-serif'; ctx.textAlign = 'center'
+    ctx.fillText('Corrosion Pit Depth Distribution', W / 2, 22)
+  }, [results, pixelsPerUnit, scaleUnit])
+
   const getCanvasCoords = (e) => {
     const rect = canvasRef.current.getBoundingClientRect()
     return { x: e.clientX - rect.left, y: e.clientY - rect.top }
@@ -126,10 +249,6 @@ const Extraction = () => {
 
     const form = new FormData()
     form.append('image', imageFile)
-    if (pixelsPerUnit) {
-      form.append('pixels_per_unit', pixelsPerUnit)
-      form.append('scale_unit', scaleUnit)
-    }
 
     try {
       const res = await fetch('http://localhost:5000/analyze', { method: 'POST', body: form })
@@ -214,8 +333,8 @@ const Extraction = () => {
       pdf.text(`  ${lbl}: ${(prob * 100).toFixed(1)}%`, margin, y); y += 5
     }); y += 5
 
-    // Depth distribution
-    if (results.depth?.hist_img) {
+    // Depth distribution — grab from live canvas (already reflects current scale)
+    if (depthCanvas.current && results.depth?.kde_x?.length > 0) {
       if (y + 10 > pageH - margin) { pdf.addPage(); y = margin }
       pdf.setFontSize(14); pdf.setTextColor(20, 20, 20)
       pdf.text('Pit Depth Distribution', margin, y); y += 6
@@ -228,9 +347,9 @@ const Extraction = () => {
       pdf.setFontSize(8); pdf.setTextColor(140, 140, 140)
       pdf.text('Probability distribution of pit depth from the ideal undamaged surface boundary (convex hull of the metal sample).', margin, y); y += 6
       const chartW = pageW - margin * 2
-      const chartH = chartW * 0.5
+      const chartH = chartW * 0.4
       if (y + chartH > pageH - margin) { pdf.addPage(); y = margin }
-      pdf.addImage(`data:image/jpeg;base64,${results.depth.hist_img}`, 'JPEG', margin, y, chartW, chartH)
+      pdf.addImage(depthCanvas.current.toDataURL('image/png'), 'PNG', margin, y, chartW, chartH)
       y += chartH + 8
     }
 
@@ -472,7 +591,7 @@ const Extraction = () => {
                 </div>
 
                 {/* Depth distribution */}
-                {results.depth?.hist_img && (
+                {results.depth?.kde_x?.length > 0 && (
                   <div className="depth-section">
                     <h2 className="transforms-title">Pit Depth Distribution</h2>
                     <p className="depth-desc">
@@ -480,12 +599,12 @@ const Extraction = () => {
                       Depth is measured from the ideal undamaged surface boundary (convex hull of the metal sample).
                       {pixelsPerUnit
                         ? ` Scale: 1 ${scaleUnit} = ${pixelsPerUnit.toFixed(2)} px.`
-                        : ' Draw a scale bar and Re-Analyse to show depth in real units.'}
+                        : ' Draw a scale bar above to show depth in real units — updates instantly.'}
                     </p>
-                    <img
-                      src={`data:image/jpeg;base64,${results.depth.hist_img}`}
-                      alt="Depth distribution"
+                    <canvas
+                      ref={depthCanvas}
                       className="depth-chart-img"
+                      style={{ width: '100%', height: 'auto' }}
                     />
                   </div>
                 )}

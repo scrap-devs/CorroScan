@@ -8,7 +8,7 @@ opencv-python   # image processing: masking, morphology, corrosion segmentation
 pillow          # image loading for PyTorch datasets
 pandas          # loading the labels CSV
 scikit-learn    # train/test split, classification metrics
-matplotlib      # KDE depth distribution plot + training history
+matplotlib      # training history plots (train.py)
 scipy           # gaussian_kde for pit depth probability distribution
 flask           # REST API server
 flask-cors      # cross-origin requests from the React frontend

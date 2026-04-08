@@ -38,7 +38,7 @@ npm run dev
 - **Severity classification** — CNN classifies images as Low or High corrosion severity with confidence scores
 - **Corroded area** — pixel-level segmentation of corrosion pits, excluding black backgrounds
 - **Scale bar tool** — draw over the image's scale bar to convert pixel measurements to real-world units (µm, mm, nm)
-- **Pit depth distribution** — KDE probability curve of pit depth estimated from local intensity contrast (darker pit = deeper)
+- **Pit depth distribution** — KDE probability curve of pit depth measured via distance transform from the convex hull (ideal undamaged surface boundary)
 - **PDF export** — full report including stats, probability bars, depth distribution chart, and processed images
 
 ## Output

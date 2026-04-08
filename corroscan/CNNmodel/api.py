@@ -10,7 +10,6 @@ Exposes:
     POST /analyze   -- accepts an image, returns severity + corroded area + depth distribution + transformed images
 """
 
-import io
 import os
 import sys
 import tempfile
@@ -18,9 +17,6 @@ import base64
 
 import cv2
 import numpy as np
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 from scipy.stats import gaussian_kde
 from flask import Flask, request, jsonify
 from flask_cors import CORS
@@ -184,8 +180,7 @@ def build_transforms(img_bgr: np.ndarray, smask, cmask, gray) -> dict:
     return images
 
 
-def compute_depth_stats(smask, cmask, _pit_map, ideal_metal=None,
-                        pixels_per_unit: float = None, scale_unit: str = "px") -> dict:
+def compute_depth_stats(smask, cmask, _pit_map, ideal_metal=None) -> dict:
     """
     Measure corrosion pit depth from the exposed metal surface.
 
@@ -207,13 +202,7 @@ def compute_depth_stats(smask, cmask, _pit_map, ideal_metal=None,
     cmask was built from outer_bg ∩ ideal_metal (see _get_masks).
     """
     if np.sum(cmask > 0) == 0:
-        return {
-            "max_depth_px":  0.0,
-            "mean_depth_px": 0.0,
-            "kde_x":         [],
-            "kde_y":         [],
-            "hist_img":      None,
-        }
+        return {"max_depth_px": 0.0, "mean_depth_px": 0.0, "kde_x": [], "kde_y": []}
 
     # Recompute ideal_metal if not provided
     if ideal_metal is None:
@@ -237,13 +226,7 @@ def compute_depth_stats(smask, cmask, _pit_map, ideal_metal=None,
     pit_depths = pit_depths[pit_depths > 2.0]
 
     if len(pit_depths) < 10:
-        return {
-            "max_depth_px":  0.0,
-            "mean_depth_px": 0.0,
-            "kde_x":         [],
-            "kde_y":         [],
-            "hist_img":      None,
-        }
+        return {"max_depth_px": 0.0, "mean_depth_px": 0.0, "kde_x": [], "kde_y": []}
 
     # Subsample for KDE speed
     if len(pit_depths) > 50_000:
@@ -253,63 +236,16 @@ def compute_depth_stats(smask, cmask, _pit_map, ideal_metal=None,
     max_depth  = float(np.percentile(pit_depths, 99))
     mean_depth = float(pit_depths.mean())
 
-    # ── Convert to real units if scale provided ───────────────────────────────
-    if pixels_per_unit and pixels_per_unit > 0:
-        plot_depths    = pit_depths / pixels_per_unit
-        plot_max       = max_depth  / pixels_per_unit
-        plot_mean      = mean_depth / pixels_per_unit
-        unit_label     = scale_unit
-        depth_fmt      = ".3f"
-    else:
-        plot_depths    = pit_depths
-        plot_max       = max_depth
-        plot_mean      = mean_depth
-        unit_label     = "px"
-        depth_fmt      = ".1f"
-
-    # ── KDE curve ─────────────────────────────────────────────────────────────
-    kde    = gaussian_kde(plot_depths, bw_method="scott")
-    x_vals = np.linspace(0, plot_max * 1.05, 300)
+    # ── KDE curve (always in pixels — frontend handles unit conversion) ──────
+    kde    = gaussian_kde(pit_depths, bw_method="scott")
+    x_vals = np.linspace(0, max_depth * 1.05, 300)
     y_vals = kde(x_vals)
-
-    # ── Matplotlib plot ────────────────────────────────────────────────────────
-    fig, ax = plt.subplots(figsize=(7, 3.5))
-
-    ax.fill_between(x_vals, y_vals, alpha=0.35, color="#ef4444")
-    ax.plot(x_vals, y_vals, color="#ef4444", linewidth=2.5)
-
-    ax.axvline(plot_max,  color="#facc15", linestyle="--", linewidth=2,
-               label=f"Max depth:  {plot_max:{depth_fmt}} {unit_label}")
-    ax.axvline(plot_mean, color="#60a5fa", linestyle="--", linewidth=2,
-               label=f"Mean depth: {plot_mean:{depth_fmt}} {unit_label}")
-
-    ax.set_xlabel(f"Depth from undamaged surface ({unit_label})", color="#c0c4d6", fontsize=11)
-    ax.set_ylabel("Probability density",                   color="#c0c4d6", fontsize=11)
-    ax.set_title("Corrosion Pit Depth Distribution",
-                 color="#ffffff", fontsize=13, pad=10)
-    ax.legend(facecolor="#1a1f2e", labelcolor="#c0c4d6", edgecolor="#2e3147")
-    ax.set_facecolor("#1a1f2e")
-    fig.patch.set_facecolor("#0f1117")
-    ax.tick_params(colors="#8b8fa8")
-    ax.set_xlim(left=0)
-    ax.set_ylim(bottom=0)
-    for spine in ax.spines.values():
-        spine.set_color("#2e3147")
-    fig.tight_layout()
-
-    buf = io.BytesIO()
-    fig.savefig(buf, format="jpeg", dpi=150, bbox_inches="tight",
-                facecolor=fig.get_facecolor())
-    plt.close(fig)
-    buf.seek(0)
-    hist_img = base64.b64encode(buf.read()).decode("utf-8")
 
     return {
         "max_depth_px":  max_depth,
         "mean_depth_px": mean_depth,
         "kde_x":         x_vals.tolist(),
         "kde_y":         y_vals.tolist(),
-        "hist_img":      hist_img,
     }
 
 
@@ -325,18 +261,13 @@ def analyze():
         file.save(tmp_path)
 
     try:
-        ppu_raw    = request.form.get("pixels_per_unit")
-        ppu        = float(ppu_raw) if ppu_raw else None
-        s_unit     = request.form.get("scale_unit", "px")
-
         model  = get_model()
         result = predict_image(tmp_path, model, CONFIG["device"])
         img    = cv2.imread(tmp_path)
 
         smask, cmask, gray, pit_map, ideal_metal = _get_masks(img)
         imgs                                     = build_transforms(img, smask, cmask, gray)
-        depth                                    = compute_depth_stats(smask, cmask, pit_map, ideal_metal,
-                                                                       pixels_per_unit=ppu, scale_unit=s_unit)
+        depth                                    = compute_depth_stats(smask, cmask, pit_map, ideal_metal)
 
         return jsonify({
             "severity":      result["severity"],
