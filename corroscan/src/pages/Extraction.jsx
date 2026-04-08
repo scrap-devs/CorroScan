@@ -126,6 +126,10 @@ const Extraction = () => {
 
     const form = new FormData()
     form.append('image', imageFile)
+    if (pixelsPerUnit) {
+      form.append('pixels_per_unit', pixelsPerUnit)
+      form.append('scale_unit', scaleUnit)
+    }
 
     try {
       const res = await fetch('http://localhost:5000/analyze', { method: 'POST', body: form })
@@ -189,6 +193,16 @@ const Extraction = () => {
       pdf.text(`Calculated from user-defined scale: 1 ${scaleUnit} = ${pixelsPerUnit.toFixed(1)} px`, margin, y); y += 7
     }
 
+    if (results.depth?.max_depth_px > 0) {
+      const depthStr = pixelsPerUnit
+        ? `${(results.depth.max_depth_px / pixelsPerUnit).toFixed(2)} ${scaleUnit}`
+        : `${results.depth.max_depth_px.toFixed(1)} px`
+      pdf.setFontSize(11); pdf.setTextColor(40, 40, 40)
+      pdf.text(`Max Pit Depth: ${depthStr}`, margin, y); y += 5
+      pdf.setFontSize(9); pdf.setTextColor(100, 100, 100)
+      pdf.text('Deepest corrosion pit measured from the ideal undamaged surface boundary (convex hull of the metal sample). Reported as the 99th percentile.', margin, y); y += 7
+    }
+
     y += 2
     // Probabilities
     pdf.setFontSize(11); pdf.setTextColor(20, 20, 20)
@@ -212,7 +226,7 @@ const Extraction = () => {
         margin, y
       ); y += 5
       pdf.setFontSize(8); pdf.setTextColor(140, 140, 140)
-      pdf.text('Continuous KDE probability distribution of pit depth from the exposed metal surface edge.', margin, y); y += 6
+      pdf.text('Probability distribution of pit depth from the ideal undamaged surface boundary (convex hull of the metal sample).', margin, y); y += 6
       const chartW = pageW - margin * 2
       const chartH = chartW * 0.5
       if (y + chartH > pageH - margin) { pdf.addPage(); y = margin }
@@ -220,10 +234,8 @@ const Extraction = () => {
       y += chartH + 8
     }
 
-    pdf.setDrawColor(200, 200, 200)
-    pdf.line(margin, y, pageW - margin, y); y += 8
-
-    // Images — 2 per row
+    // Images — new page, 2 per row
+    pdf.addPage(); y = margin
     pdf.setFontSize(14); pdf.setTextColor(20, 20, 20)
     pdf.text('Image Analysis', margin, y); y += 8
 
@@ -435,7 +447,7 @@ const Extraction = () => {
                   )}
                   <div className="stat-explanation-row">
                     <span className="stat-explanation-label">Max Pit Depth</span>
-                    <span className="stat-explanation-text">The deepest corrosion pit measured from the nearest metal surface edge using a distance transform.</span>
+                    <span className="stat-explanation-text">The deepest corrosion pit measured from the ideal undamaged surface boundary (convex hull of the metal sample). Reported as the 99th percentile depth across all pit pixels.</span>
                   </div>
                 </div>
 
@@ -464,11 +476,11 @@ const Extraction = () => {
                   <div className="depth-section">
                     <h2 className="transforms-title">Pit Depth Distribution</h2>
                     <p className="depth-desc">
-                      Continuous probability distribution of corrosion pit depth across all detected pit pixels.
-                      Depth is measured from the exposed metal surface edge (where metal meets background).
+                      Probability distribution of corrosion pit depth across all detected pit pixels.
+                      Depth is measured from the ideal undamaged surface boundary (convex hull of the metal sample).
                       {pixelsPerUnit
-                        ? ` Scale applied: x-axis values × ${(1/pixelsPerUnit).toFixed(4)} = depth in ${scaleUnit}.`
-                        : ' Draw a scale bar above to convert to real units.'}
+                        ? ` Scale: 1 ${scaleUnit} = ${pixelsPerUnit.toFixed(2)} px.`
+                        : ' Draw a scale bar and Re-Analyse to show depth in real units.'}
                     </p>
                     <img
                       src={`data:image/jpeg;base64,${results.depth.hist_img}`}

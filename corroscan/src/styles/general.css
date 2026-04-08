@@ -10,3 +10,101 @@ body {
 main{
   padding-top: 80px;
 }
+
+/* ── Image Guidelines / Requirements section ─────────────────────────── */
+.requirements-section {
+  background-color: #0f1117;
+  padding: 64px 24px 80px;
+}
+
+.requirements-container {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.requirements-heading {
+  font-size: 28px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 8px;
+}
+
+.requirements-subheading {
+  font-size: 15px;
+  color: #8b8fa8;
+  margin: 0 0 40px;
+}
+
+.requirements-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.req-card {
+  background-color: #1a1f2e;
+  border: 1px solid #2e3147;
+  border-radius: 10px;
+  padding: 24px;
+}
+
+.req-card-wide {
+  grid-column: 1 / -1;
+}
+
+.req-card-header {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  display: inline-block;
+}
+
+.req-required   { background: rgba(99,102,241,0.15); color: #818cf8; }
+.req-acceptable { background: rgba(34,197,94,0.12);  color: #4ade80; }
+.req-unsupported{ background: rgba(239,68,68,0.12);  color: #f87171; }
+
+.req-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.req-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  color: #c0c4d6;
+  line-height: 1.5;
+}
+
+.req-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-top: 5px;
+}
+
+.req-dot-required    { background-color: #818cf8; }
+.req-dot-acceptable  { background-color: #4ade80; }
+.req-dot-unsupported { background-color: #f87171; }
+
+/* fade-in animation */
+.fade-in-text {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.fade-in-text.active {
+  opacity: 1;
+  transform: translateY(0);
+}
