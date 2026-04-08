@@ -41,7 +41,6 @@ You need **two terminals open at the same time**.
 ### Prerequisites
 - Python 3.9+
 - Node.js 18+
-- Tesseract OCR *(optional)* → https://github.com/UB-Mannheim/tesseract/wiki — used for automatic scale bar reading; falls back to px² without it
 
 ### 1. Install dependencies
 

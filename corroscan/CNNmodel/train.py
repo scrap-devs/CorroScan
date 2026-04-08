@@ -2,8 +2,7 @@
 CorroScan CNN Training Pipeline
 ================================
 - Severity classification : moderate | severe  (EfficientNet-B0, transfer learning)
-- Scale bar detection      : OpenCV morphology + pytesseract OCR
-- Corrosion area estimation: HSV colour segmentation, result in mm² (or px² fallback)
+- Corrosion area estimation: local contrast segmentation
 
 Expected data layout
 --------------------
@@ -15,12 +14,10 @@ CNNmodel/
 
 Install dependencies
 --------------------
-pip install torch torchvision opencv-python pillow pandas scikit-learn matplotlib pytesseract
-# Windows: also install Tesseract-OCR and set TESSERACT_CMD below if not on PATH
+pip install -r requirements.txt
 """
 
 import os
-import re
 import warnings
 import numpy as np
 import pandas as pd
@@ -36,21 +33,6 @@ from PIL import Image
 import matplotlib.pyplot as plt
 
 warnings.filterwarnings("ignore")
-
-# If Tesseract is not on PATH, set the executable path here:
-# e.g. TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-TESSERACT_CMD = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-try:
-    import pytesseract
-    if TESSERACT_CMD:
-        pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
-    pytesseract.get_tesseract_version()
-    HAS_TESSERACT = True
-except Exception:
-    HAS_TESSERACT = False
-    print("[WARNING] pytesseract / Tesseract-OCR not available — "
-          "scale bar will not be read; area will be reported in px².")
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 
@@ -72,91 +54,6 @@ CONFIG = {
 
 LABEL_MAP  = {"moderate": 0, "severe": 1}
 IDX_TO_LBL = {v: k for k, v in LABEL_MAP.items()}
-
-
-# ── SCALE BAR DETECTION ───────────────────────────────────────────────────────
-
-def parse_scale_text(text: str):
-    """Parse OCR text like '1 mm', '500 µm', '0.5 cm' → value in mm. Returns None on failure."""
-    text = text.lower().replace("\n", " ")
-    for ch in ("μ", "µ", "u"):
-        text = text.replace(ch, "u")
-    m = re.search(r"([\d]+(?:[.,][\d]+)?)\s*(nm|um|mm|cm)", text)
-    if not m:
-        return None
-    value = float(m.group(1).replace(",", "."))
-    unit  = m.group(2)
-    return value * {"nm": 1e-6, "um": 1e-3, "mm": 1.0, "cm": 10.0}[unit]
-
-
-def detect_scale_bar(image_bgr: np.ndarray):
-    """
-    Locate the green scale bar widget always in the bottom-right corner.
-
-    The widget is a green comb/ruler graphic with a text label below it
-    (e.g. "150 µm", "30 µm"). It sits in roughly the bottom 18%, right 35%
-    of the frame.
-
-    The key challenge is that some images are entirely green (fluorescence).
-    We distinguish the overlay by requiring VERY high saturation (S > 160) —
-    programmatic overlays use pure neon green; organic/optical greens are duller.
-
-    Returns
-    -------
-    pixels_per_mm : float | None
-    bar_length_px : int   | None
-    scale_mm      : float | None
-    """
-    h, w = image_bgr.shape[:2]
-
-    # Crop to the bottom-right corner where the widget always lives
-    roi_y = int(h * 0.82)
-    roi_x = int(w * 0.65)
-    roi   = image_bgr[roi_y:, roi_x:]
-
-    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
-
-    # Neon/programmatic green: H 35-85 (OpenCV 0-180 scale), S > 160, V > 80
-    # This excludes dull organic greens present in fluorescence images
-    green_mask = cv2.inRange(hsv, (35, 160, 80), (85, 255, 255))
-
-    cnts, _ = cv2.findContours(green_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-    if not cnts:
-        return None, None, None
-
-    # The ruler bar is the widest contour in the region
-    best_bar = max(cnts, key=lambda c: cv2.boundingRect(c)[2])
-    bx, by, bw, bh = cv2.boundingRect(best_bar)
-
-    if bw < 15:   # too small to be a real scale bar
-        return None, None, None
-
-    bar_length_px = bw
-
-    if not HAS_TESSERACT:
-        return None, bar_length_px, None
-
-    # OCR: grab the full widget area (bar + text label below)
-    ox1 = max(0, bx - 5)
-    ox2 = min(roi.shape[1], bx + bw + 5)
-    oy1 = max(0, by - 5)
-    oy2 = min(roi.shape[0], by + bh + 40)
-    ocr_crop = roi[oy1:oy2, ox1:ox2]
-
-    # Green channel is brightest for this overlay; upscale 4× for Tesseract
-    g_chan = ocr_crop[:, :, 1]
-    g_chan = cv2.resize(g_chan, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
-    _, ocr_bin = cv2.threshold(g_chan, 100, 255, cv2.THRESH_BINARY)
-
-    # No character whitelist — it blocks the µ symbol on many Tesseract builds.
-    # parse_scale_text handles noisy output via regex.
-    for psm in (7, 6, 8, 13):
-        text = pytesseract.image_to_string(ocr_bin, config=f"--psm {psm} --oem 3")
-        scale_mm = parse_scale_text(text)
-        if scale_mm and scale_mm > 0:
-            return bar_length_px / scale_mm, bar_length_px, scale_mm
-
-    return None, bar_length_px, None
 
 
 # ── CORROSION AREA SEGMENTATION ───────────────────────────────────────────────
@@ -421,8 +318,7 @@ def predict_image(image_path: str, model: nn.Module, device: str, img_size: int 
 def main():
     cfg    = CONFIG
     device = cfg["device"]
-    print(f"Device : {device}")
-    print(f"Tesseract available: {HAS_TESSERACT}\n")
+    print(f"Device : {device}\n")
 
     # Load CSV
     df = pd.read_csv(cfg["csv_path"])
