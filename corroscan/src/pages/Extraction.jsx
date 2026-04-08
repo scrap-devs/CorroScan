@@ -186,7 +186,7 @@ const Extraction = () => {
       pdf.setFontSize(11); pdf.setTextColor(40, 40, 40)
       pdf.text(`Corroded Area: ${area.value} ${area.unit}`, margin, y); y += 5
       pdf.setFontSize(9); pdf.setTextColor(100, 100, 100)
-      pdf.text(`Calculated from user-defined scale: 1 ${scaleUnit} = ${(results.corroded_px / parseFloat(area.value) ** 0.5).toFixed(1)} px`, margin, y); y += 7
+      pdf.text(`Calculated from user-defined scale: 1 ${scaleUnit} = ${pixelsPerUnit.toFixed(1)} px`, margin, y); y += 7
     }
 
     y += 2
@@ -212,7 +212,7 @@ const Extraction = () => {
         margin, y
       ); y += 5
       pdf.setFontSize(8); pdf.setTextColor(140, 140, 140)
-      pdf.text('Continuous KDE probability distribution of pit depth from the nearest metal surface.', margin, y); y += 6
+      pdf.text('Continuous KDE probability distribution of pit depth from the exposed metal surface edge.', margin, y); y += 6
       const chartW = pageW - margin * 2
       const chartH = chartW * 0.5
       if (y + chartH > pageH - margin) { pdf.addPage(); y = margin }
@@ -465,7 +465,7 @@ const Extraction = () => {
                     <h2 className="transforms-title">Pit Depth Distribution</h2>
                     <p className="depth-desc">
                       Continuous probability distribution of corrosion pit depth across all detected pit pixels.
-                      Depth is measured from the nearest metal surface using a distance transform.
+                      Depth is measured from the exposed metal surface edge (where metal meets background).
                       {pixelsPerUnit
                         ? ` Scale applied: x-axis values × ${(1/pixelsPerUnit).toFixed(4)} = depth in ${scaleUnit}.`
                         : ' Draw a scale bar above to convert to real units.'}
@@ -478,14 +478,30 @@ const Extraction = () => {
                   </div>
                 )}
 
-                {/* Transformed images */}
+                {/* Corrosion detection preview — shown prominently */}
+                <h2 className="transforms-title">Corrosion Detection</h2>
+                <div className="transforms-grid" style={{ marginBottom: '32px' }}>
+                  {[
+                    { key: 'segmentation', label: 'Corrosion Overlay' },
+                    { key: 'mask',         label: 'Corrosion Mask' },
+                  ].map(({ key, label }) => (
+                    <div key={key} className="transform-card">
+                      <img
+                        src={`data:image/jpeg;base64,${results.images[key]}`}
+                        alt={label}
+                        className="transform-img"
+                      />
+                      <div className="transform-label">{label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* All transformed images */}
                 <h2 className="transforms-title">Image Analysis</h2>
                 <div className="transforms-grid">
                   {[
                     { key: 'original',     label: 'Original' },
                     { key: 'grayscale',    label: 'Grayscale' },
-                    { key: 'segmentation', label: 'Corrosion Overlay' },
-                    { key: 'mask',         label: 'Corrosion Mask' },
                     { key: 'edges',        label: 'Edge Detection' },
                   ].map(({ key, label }) => (
                     <div key={key} className="transform-card">

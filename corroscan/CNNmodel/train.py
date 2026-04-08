@@ -200,18 +200,25 @@ def estimate_corroded_area(image_bgr: np.ndarray):
     # ── Step 2: blank out the scale bar widget (bottom-right corner) ──
     sample_mask[int(h * 0.82):, int(w * 0.65):] = 0
 
-    # ── Step 3: local-contrast dark-pit detection ──
-    # Heavily blur to estimate the local metal brightness (background model)
-    local_bg = cv2.GaussianBlur(gray, (61, 61), 0)
+    # ── Step 3: local contrast dark-pit detection (large kernel) ──
+    # A 201px blur includes surrounding bright metal even for 200-400px wide
+    # dark bands, so band interiors get nonzero contrast and are detected.
+    local_bg = cv2.GaussianBlur(gray, (201, 201), 0)
+    diff     = local_bg.astype(np.int16) - gray.astype(np.int16)
+    pit_map  = np.clip(diff, 0, 255).astype(np.uint8)
 
-    # Pixels darker than local background by > threshold = corrosion.
-    # Threshold raised to 40 to skip the low-contrast polishing/scratch lines.
-    diff = local_bg.astype(np.int16) - gray.astype(np.int16)
-    pit_map = np.clip(diff, 0, 255).astype(np.uint8)
-    _, corr_mask = cv2.threshold(pit_map, 40, 255, cv2.THRESH_BINARY)
+    sample_vals = pit_map[sample_mask > 0].astype(np.uint8)
+    thresh_otsu, _ = cv2.threshold(sample_vals.reshape(1, -1), 0, 255,
+                                   cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    thresh = max(20, int(thresh_otsu))
+    _, raw = cv2.threshold(pit_map, thresh, 255, cv2.THRESH_BINARY)
+    raw = cv2.bitwise_and(raw, sample_mask)
 
-    # Restrict to sample area only
-    corr_mask = cv2.bitwise_and(corr_mask, sample_mask)
+    # Suppress polishing marks with circular morphological opening.
+    # Marks are thin lines (1-3 px wide) regardless of angle; a 9×9 disk
+    # removes them while preserving genuine pits (10-20+ px blobs) and bands.
+    disk = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (9, 9))
+    corr_mask = cv2.morphologyEx(raw, cv2.MORPH_OPEN, disk)
 
     # Morphological cleanup — remove single-pixel noise, close tiny gaps
     k = np.ones((3, 3), np.uint8)
@@ -228,9 +235,9 @@ def estimate_corroded_area(image_bgr: np.ndarray):
         cw = stats[lbl, cv2.CC_STAT_WIDTH]
         ch = stats[lbl, cv2.CC_STAT_HEIGHT]
         area_cc = stats[lbl, cv2.CC_STAT_AREA]
-        if area_cc < 5:           # skip single-pixel noise
+        if area_cc < 30:       # skip noise and fine texture fragments
             continue
-        if ch > cw * 5:           # tall & thin → scratch line, skip
+        if ch > cw * 5:        # tall & thin → scratch line, skip
             continue
         filtered[labels == lbl] = 255
     corr_mask = filtered

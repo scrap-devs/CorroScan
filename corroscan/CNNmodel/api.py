@@ -56,42 +56,114 @@ def to_b64(img_bgr: np.ndarray) -> str:
     return base64.b64encode(buf).decode("utf-8")
 
 
+def _convex_hull_mask(smask: np.ndarray) -> np.ndarray:
+    """
+    Fill the convex hull of the largest contour in smask.
+    Returns a filled mask the same size as smask.
+    This represents the 'ideal undamaged metal footprint'.
+    """
+    contours, _ = cv2.findContours(smask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    ideal = np.zeros_like(smask)
+    if contours:
+        largest = max(contours, key=cv2.contourArea)
+        hull = cv2.convexHull(largest)
+        cv2.fillPoly(ideal, [hull], 255)
+    return ideal
+
+
 def _get_masks(img_bgr: np.ndarray):
     """
-    Shared helper — returns (smask, cmask, gray).
-    Mirrors estimate_corroded_area so all functions use identical masks.
+    Returns (smask, cmask, gray, pit_map, ideal_metal).
+
+    Strategy
+    --------
+    Corrosion pits are RECESSES in the metal surface — they are outer-background
+    regions that occupy space within the ideal (undamaged) metal outline.  This is
+    physically correct and automatically excludes:
+      - Polishing marks  (fine scratches INSIDE the metal, not connected to bg)
+      - Inclusions       (dark particles INSIDE the metal, not connected to bg)
+      - Scale bar widget (excluded from smask before hull computation)
+
+    Steps:
+    1. smask      = metal region (threshold > 20, minimal morphology to avoid
+                    filling pit openings with a large close).
+    2. outer_bg   = dark pixels connected to the image border.
+    3. ideal_metal = convex hull of smask = what the undamaged surface would look like.
+    4. cmask      = outer_bg ∩ ideal_metal = the actual pit-hole pixels.
     """
     h, w = img_bgr.shape[:2]
     gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
-    _, smask = cv2.threshold(gray, 20, 255, cv2.THRESH_BINARY)
-    k_c = np.ones((30, 30), np.uint8)
-    k_o = np.ones((10, 10), np.uint8)
-    smask = cv2.morphologyEx(smask, cv2.MORPH_CLOSE, k_c)
-    smask = cv2.morphologyEx(smask, cv2.MORPH_OPEN,  k_o)
+    # ── smask: bright metal pixels (Otsu threshold) ─────────────────────────
+    # Otsu adapts per image so images where background > 20 grey still work.
+    _, smask = cv2.threshold(gray, 0, 255,
+                             cv2.THRESH_BINARY + cv2.THRESH_OTSU)
     smask[int(h * 0.82):, int(w * 0.65):] = 0
+    disk25 = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (25, 25))
+    smask = cv2.morphologyEx(smask, cv2.MORPH_OPEN,  np.ones((5, 5), np.uint8))
+    smask = cv2.morphologyEx(smask, cv2.MORPH_CLOSE, disk25)
 
-    local_bg = cv2.GaussianBlur(gray, (61, 61), 0)
-    diff     = local_bg.astype(np.int16) - gray.astype(np.int16)
-    pit_map  = np.clip(diff, 0, 255).astype(np.uint8)
-    _, cmask = cv2.threshold(pit_map, 40, 255, cv2.THRESH_BINARY)
-    cmask    = cv2.bitwise_and(cmask, smask)
+    # ── Outer background (not-smask connected to image border) ───────────────
+    # Includes the large exterior background AND pit holes (pit holes are dark
+    # = not-smask, and are connected to the exterior through the surface opening).
+    not_smask = cv2.bitwise_not(smask)
+    _, bg_labels = cv2.connectedComponents(not_smask)
+    border_labels = set()
+    border_labels.update(bg_labels[0, :].tolist())
+    border_labels.update(bg_labels[h-1, :].tolist())
+    border_labels.update(bg_labels[:, 0].tolist())
+    border_labels.update(bg_labels[:, w-1].tolist())
+    border_labels.discard(0)
 
-    k     = np.ones((3, 3), np.uint8)
-    cmask = cv2.morphologyEx(cmask, cv2.MORPH_OPEN,  k)
-    cmask = cv2.morphologyEx(cmask, cv2.MORPH_CLOSE, k)
+    outer_bg = np.isin(bg_labels, list(border_labels)).astype(np.uint8) * 255
+    outer_bg[int(h * 0.82):, int(w * 0.65):] = 0
 
-    filtered  = np.zeros_like(cmask)
+    # ── Ideal metal footprint ────────────────────────────────────────────────
+    # Problem: Otsu smask captures only bright spots, so the hull starts well
+    # inside the metal surface — causing the red to stop short of the edge.
+    # Fix: use a low threshold (15) to capture dark edge pixels too, then
+    # subtract outer_bg so the background isn't included in the hull region.
+    _, smask_wide = cv2.threshold(gray, 15, 255, cv2.THRESH_BINARY)
+    smask_wide[int(h * 0.82):, int(w * 0.65):] = 0
+    smask_for_hull = cv2.bitwise_and(smask_wide, cv2.bitwise_not(outer_bg))
+    smask_for_hull = cv2.morphologyEx(smask_for_hull, cv2.MORPH_OPEN,
+                                      np.ones((5, 5), np.uint8))
+    smask_for_hull = cv2.morphologyEx(smask_for_hull, cv2.MORPH_CLOSE,
+                                      np.ones((15, 15), np.uint8))
+    ideal_metal = _convex_hull_mask(smask_for_hull)
+
+    # ── Pit mask: outer background within the ideal metal outline ────────────
+    # These are the actual corroded recesses — the holes in the surface.
+    cmask = cv2.bitwise_and(outer_bg, ideal_metal)
+
+    # ── Filter: keep elongated pits, discard circular inclusions ─────────────
+    # Corrosion pits are finger/channel shaped → high aspect ratio (W >> H or H >> W).
+    # Inclusions / second-phase particles are compact dots → aspect ratio ≈ 1.
+    # Rules (applied per connected component):
+    #   • Drop anything < 100 px²  (pure noise).
+    #   • Drop anything < 4000 px² whose bounding-box aspect ratio < 2.0.
+    #     These are the small circular dots.  Large blobs (≥ 4000 px²) are
+    #     kept regardless of shape so wide pit openings aren't lost.
     n_lbl, lbl_map, stats, _ = cv2.connectedComponentsWithStats(cmask, connectivity=8)
+    filtered = np.zeros_like(cmask)
     for lbl in range(1, n_lbl):
+        area_cc = stats[lbl, cv2.CC_STAT_AREA]
         cw      = stats[lbl, cv2.CC_STAT_WIDTH]
         ch      = stats[lbl, cv2.CC_STAT_HEIGHT]
-        area_cc = stats[lbl, cv2.CC_STAT_AREA]
-        if area_cc < 5 or ch > cw * 5:
+        if area_cc < 100:
+            continue
+        aspect = max(cw, ch) / max(min(cw, ch), 1)
+        if area_cc < 4000 and aspect < 2.0:   # small + circular = inclusion dot
             continue
         filtered[lbl_map == lbl] = 255
+    cmask = filtered
 
-    return smask, filtered, gray, pit_map
+    # ── pit_map kept for visualisation compatibility ─────────────────────────
+    local_bg = cv2.GaussianBlur(gray, (201, 201), 0)
+    diff     = local_bg.astype(np.int16) - gray.astype(np.int16)
+    pit_map  = np.clip(diff, 0, 255).astype(np.uint8)
+
+    return smask, cmask, gray, pit_map, ideal_metal
 
 
 def build_transforms(img_bgr: np.ndarray, smask, cmask, gray) -> dict:
@@ -112,19 +184,26 @@ def build_transforms(img_bgr: np.ndarray, smask, cmask, gray) -> dict:
     return images
 
 
-def compute_depth_stats(smask, cmask, pit_map) -> dict:
+def compute_depth_stats(smask, cmask, _pit_map, ideal_metal=None) -> dict:
     """
-    Estimate corrosion pit depth from local intensity contrast.
+    Measure corrosion pit depth from the exposed metal surface.
 
-    pit_map[x,y] = max(0, local_background[x,y] - gray[x,y]) — how much
-    darker each pixel is compared to its surroundings. Deeper pits scatter
-    less light and appear darker, so a higher pit_map value means a deeper
-    pit. Values are in intensity units (0-255); convert to real-world depth
-    using the scale bar (intensity units / px per µm ≈ µm).
+    Depth definition
+    ----------------
+    For each pit pixel (in cmask), depth = its Euclidean distance to the
+    nearest pixel on the IDEAL metal surface boundary (convex hull edge).
 
-    The probability distribution is a smooth KDE curve (kernel density
-    estimate), giving a continuous distribution of depth across all pit
-    pixels — similar to a Maxwell-Boltzmann curve in chemistry.
+    This is physically correct:
+    - The convex hull boundary represents the undamaged surface line.
+    - Distance from a pit pixel to that boundary = how deep into the
+      material the corrosion has penetrated at that location.
+    - Works for any pit orientation (vertical, horizontal, oblique).
+    - Correctly handles narrow finger-shaped pits: the pixel at the tip
+      of a finger pit is far from the hull boundary (correct depth), not
+      just far from the nearest pit wall.
+
+    No polishing marks or inclusions contaminate this measurement because
+    cmask was built from outer_bg ∩ ideal_metal (see _get_masks).
     """
     if np.sum(cmask > 0) == 0:
         return {
@@ -135,23 +214,50 @@ def compute_depth_stats(smask, cmask, pit_map) -> dict:
             "hist_img":      None,
         }
 
-    # Depth proxy: darkness of pit pixel relative to local surface background
-    pit_depths = pit_map[cmask > 0].astype(float)
+    # Recompute ideal_metal if not provided
+    if ideal_metal is None:
+        ideal_metal = _convex_hull_mask(smask)
 
-    # Subsample for KDE if too many points (keeps it fast)
+    # ── Distance from each pixel to the ideal surface boundary ───────────────
+    # The boundary is the 1-pixel-wide outer edge of the convex hull.
+    # Any pixel inside the hull has a well-defined distance to this boundary,
+    # which equals its depth below the undamaged surface.
+    ideal_interior = cv2.erode(ideal_metal, np.ones((3, 3), np.uint8))
+    ideal_boundary = cv2.subtract(ideal_metal, ideal_interior)     # 1-px ring
+
+    # distanceTransform needs the REFERENCE pixels to be 0
+    boundary_inv = np.where(ideal_boundary > 0, 0, 255).astype(np.uint8)
+    dist_to_surface = cv2.distanceTransform(boundary_inv, cv2.DIST_L2, 5)
+
+    # ── Sample depths at pit pixels ───────────────────────────────────────────
+    pit_depths = dist_to_surface[cmask > 0].astype(float)
+
+    # Discard near-zero values (pixels right on the hull edge, 1-2 px rounding)
+    pit_depths = pit_depths[pit_depths > 2.0]
+
+    if len(pit_depths) < 10:
+        return {
+            "max_depth_px":  0.0,
+            "mean_depth_px": 0.0,
+            "kde_x":         [],
+            "kde_y":         [],
+            "hist_img":      None,
+        }
+
+    # Subsample for KDE speed
     if len(pit_depths) > 50_000:
         rng = np.random.default_rng(42)
         pit_depths = rng.choice(pit_depths, 50_000, replace=False)
 
-    max_depth  = float(pit_depths.max())
+    max_depth  = float(np.percentile(pit_depths, 99))
     mean_depth = float(pit_depths.mean())
 
-    # ── KDE curve ─────────────────────────────────────────────────────
+    # ── KDE curve ─────────────────────────────────────────────────────────────
     kde    = gaussian_kde(pit_depths, bw_method="scott")
     x_vals = np.linspace(0, max_depth * 1.05, 300)
     y_vals = kde(x_vals)
 
-    # ── Matplotlib plot ────────────────────────────────────────────────
+    # ── Matplotlib plot ────────────────────────────────────────────────────────
     fig, ax = plt.subplots(figsize=(7, 3.5))
 
     ax.fill_between(x_vals, y_vals, alpha=0.35, color="#ef4444")
@@ -162,8 +268,8 @@ def compute_depth_stats(smask, cmask, pit_map) -> dict:
     ax.axvline(mean_depth, color="#60a5fa", linestyle="--", linewidth=2,
                label=f"Mean depth: {mean_depth:.1f} px")
 
-    ax.set_xlabel("Depth from surface (intensity units)", color="#c0c4d6", fontsize=11)
-    ax.set_ylabel("Probability density",     color="#c0c4d6", fontsize=11)
+    ax.set_xlabel("Depth from undamaged surface (pixels)", color="#c0c4d6", fontsize=11)
+    ax.set_ylabel("Probability density",                   color="#c0c4d6", fontsize=11)
     ax.set_title("Corrosion Pit Depth Distribution",
                  color="#ffffff", fontsize=13, pad=10)
     ax.legend(facecolor="#1a1f2e", labelcolor="#c0c4d6", edgecolor="#2e3147")
@@ -208,9 +314,9 @@ def analyze():
         result = predict_image(tmp_path, model, CONFIG["device"])
         img    = cv2.imread(tmp_path)
 
-        smask, cmask, gray, pit_map = _get_masks(img)
-        imgs                        = build_transforms(img, smask, cmask, gray)
-        depth                       = compute_depth_stats(smask, cmask, pit_map)
+        smask, cmask, gray, pit_map, ideal_metal = _get_masks(img)
+        imgs                                     = build_transforms(img, smask, cmask, gray)
+        depth                                    = compute_depth_stats(smask, cmask, pit_map, ideal_metal)
 
         return jsonify({
             "severity":      result["severity"],
