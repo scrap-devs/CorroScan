@@ -4,6 +4,27 @@ import jsPDF from 'jspdf'
 import logo from '../icons/logo.png'
 import '../styles/header.css'
 import '../styles/extraction.css'
+import '../styles/general.css'
+
+const REQUIREMENTS = [
+  { text: 'Pitting corrosion — pits must be open at the sample surface edge (connected to the outer background)' },
+  { text: 'Single metal sample per image with a dark/black background surrounding it' },
+  { text: 'Optical or SEM microscopy image' },
+  { text: 'Scale bar in the bottom-right corner is automatically excluded — keep it there if present' },
+]
+
+const ACCEPTABLE = [
+  { text: 'Image noise and minor brightness variation across the sample' },
+  { text: 'Polishing marks (fine parallel scratches on the surface) — filtered out automatically' },
+  { text: 'Small circular inclusions or second-phase particles — filtered out automatically' },
+  { text: 'Scale bar or measurement widget in the image corner' },
+]
+
+const NOT_SUPPORTED = [
+  { text: 'Subsurface or buried pits not connected to the sample edge — these will not be detected' },
+  { text: 'Other corrosion types (uniform, intergranular, crevice, stress corrosion cracking)' },
+  { text: 'Multiple separate metal samples in a single image' },
+]
 
 const Extraction = () => {
   const [dragging,   setDragging]   = useState(false)
@@ -394,6 +415,44 @@ const Extraction = () => {
         <div className="extraction-container">
           <h1 className="extraction-title">Corrosion Analysis</h1>
           <p className="extraction-subtitle">Upload a pitting corrosion microscopy image to begin</p>
+
+          {/* Image guidelines */}
+          {!preview && (
+            <div className="requirements-container" style={{ marginBottom: '28px' }}>
+              <div className="requirements-grid">
+                <div className="req-card">
+                  <div className="req-card-header req-required">Required</div>
+                  <ul className="req-list">
+                    {REQUIREMENTS.map((r, i) => (
+                      <li key={i} className="req-item">
+                        <span className="req-dot req-dot-required" />{r.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="req-card">
+                  <div className="req-card-header req-acceptable">Acceptable</div>
+                  <ul className="req-list">
+                    {ACCEPTABLE.map((r, i) => (
+                      <li key={i} className="req-item">
+                        <span className="req-dot req-dot-acceptable" />{r.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <div className="req-card req-card-wide">
+                  <div className="req-card-header req-unsupported">Not Supported</div>
+                  <ul className="req-list">
+                    {NOT_SUPPORTED.map((r, i) => (
+                      <li key={i} className="req-item">
+                        <span className="req-dot req-dot-unsupported" />{r.text}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Drop zone */}
           {!preview && (
