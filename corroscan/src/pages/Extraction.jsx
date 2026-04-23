@@ -340,7 +340,8 @@ const Extraction = () => {
       pdf.setFontSize(11); pdf.setTextColor(40, 40, 40)
       pdf.text(`Max Pit Depth: ${depthStr}`, margin, y); y += 5
       pdf.setFontSize(9); pdf.setTextColor(100, 100, 100)
-      pdf.text('Deepest corrosion pit measured from the ideal undamaged surface boundary (convex hull of the metal sample). Reported as the 99th percentile.', margin, y); y += 7
+      const depthCaption = pdf.splitTextToSize('Deepest corrosion pit measured from the ideal undamaged surface boundary (convex hull of the metal sample). Reported as the 99th percentile.', pageW - margin * 2)
+      pdf.text(depthCaption, margin, y); y += depthCaption.length * 5
     }
 
     y += 2

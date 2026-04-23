@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="680" viewBox="0 0 900 680" font-family="'Segoe UI', Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="900" height="680" fill="#0f1117"/>
+
+  <!-- Title -->
+  <text x="450" y="38" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="700" letter-spacing="1">CorroScan — System Flow</text>
+
+  <!-- ══════════ ROW 1: Upload ══════════ -->
+  <rect x="300" y="60" width="300" height="54" rx="10" fill="#1a1f2e" stroke="#4f6ef7" stroke-width="2"/>
+  <text x="450" y="82" text-anchor="middle" fill="#4f6ef7" font-size="11" font-weight="700" letter-spacing="1">USER</text>
+  <text x="450" y="100" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">Upload Microscopy Image</text>
+
+  <!-- Arrow down -->
+  <line x1="450" y1="114" x2="450" y2="148" stroke="#4a4f6a" stroke-width="2"/>
+  <polygon points="450,154 444,144 456,144" fill="#4a4f6a"/>
+
+  <!-- ══════════ ROW 2: API ══════════ -->
+  <rect x="300" y="158" width="300" height="54" rx="10" fill="#1a1f2e" stroke="#818cf8" stroke-width="2"/>
+  <text x="450" y="180" text-anchor="middle" fill="#818cf8" font-size="11" font-weight="700" letter-spacing="1">FLASK API  •  PORT 5000</text>
+  <text x="450" y="198" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">POST /analyze</text>
+
+  <!-- Fork left arrow -->
+  <line x1="300" y1="185" x2="200" y2="185" stroke="#4a4f6a" stroke-width="2"/>
+  <line x1="200" y1="185" x2="200" y2="278" stroke="#4a4f6a" stroke-width="2"/>
+  <polygon points="200,284 194,274 206,274" fill="#4a4f6a"/>
+
+  <!-- Fork right arrow -->
+  <line x1="600" y1="185" x2="700" y2="185" stroke="#4a4f6a" stroke-width="2"/>
+  <line x1="700" y1="185" x2="700" y2="278" stroke="#4a4f6a" stroke-width="2"/>
+  <polygon points="700,284 694,274 706,274" fill="#4a4f6a"/>
+
+  <!-- ══════════ ROW 3 LEFT: CNN ══════════ -->
+  <rect x="60" y="288" width="280" height="120" rx="10" fill="#1a1f2e" stroke="#f87171" stroke-width="2"/>
+  <text x="200" y="310" text-anchor="middle" fill="#f87171" font-size="11" font-weight="700" letter-spacing="1">MACHINE LEARNING</text>
+  <text x="200" y="330" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">CNN Classifier</text>
+  <text x="200" y="352" text-anchor="middle" fill="#c0c4d6" font-size="12">EfficientNet-B0</text>
+  <text x="200" y="370" text-anchor="middle" fill="#c0c4d6" font-size="12">Fine-tuned on corrosion images</text>
+  <text x="200" y="392" text-anchor="middle" fill="#c0c4d6" font-size="12">Transfer learning</text>
+
+  <!-- ══════════ ROW 3 RIGHT: CV ══════════ -->
+  <rect x="560" y="288" width="280" height="220" rx="10" fill="#1a1f2e" stroke="#34d399" stroke-width="2"/>
+  <text x="700" y="310" text-anchor="middle" fill="#34d399" font-size="11" font-weight="700" letter-spacing="1">COMPUTER VISION PIPELINE</text>
+  <text x="700" y="330" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="600">Classical Image Processing</text>
+
+  <!-- CV steps -->
+  <rect x="580" y="342" width="240" height="24" rx="5" fill="#0f1117"/>
+  <text x="700" y="358" text-anchor="middle" fill="#c0c4d6" font-size="12">Otsu Threshold  →  Metal Mask</text>
+
+  <rect x="580" y="372" width="240" height="24" rx="5" fill="#0f1117"/>
+  <text x="700" y="388" text-anchor="middle" fill="#c0c4d6" font-size="12">Connected Components  →  Pit Detection</text>
+
+  <rect x="580" y="402" width="240" height="24" rx="5" fill="#0f1117"/>
+  <text x="700" y="418" text-anchor="middle" fill="#c0c4d6" font-size="12">Convex Hull  →  Ideal Surface Boundary</text>
+
+  <rect x="580" y="432" width="240" height="24" rx="5" fill="#0f1117"/>
+  <text x="700" y="448" text-anchor="middle" fill="#c0c4d6" font-size="12">Distance Transform  →  Pit Depths</text>
+
+  <rect x="580" y="462" width="240" height="24" rx="5" fill="#0f1117"/>
+  <text x="700" y="478" text-anchor="middle" fill="#c0c4d6" font-size="12">KDE  →  Depth Distribution Curve</text>
+
+  <!-- CNN output bubble -->
+  <rect x="90" y="432" width="220" height="60" rx="8" fill="#2d1f1f" stroke="#f87171" stroke-width="1.5"/>
+  <text x="200" y="455" text-anchor="middle" fill="#f87171" font-size="12" font-weight="600">Output</text>
+  <text x="200" y="473" text-anchor="middle" fill="#e2e2e2" font-size="12">Severity Label + Confidence %</text>
+  <text x="200" y="487" text-anchor="middle" fill="#94a3b8" font-size="11">(Moderate / Severe)</text>
+
+  <!-- Arrow CNN → output -->
+  <line x1="200" y1="408" x2="200" y2="430" stroke="#f87171" stroke-width="1.5"/>
+  <polygon points="200,432 195,424 205,424" fill="#f87171"/>
+
+  <!-- Merge arrows to frontend -->
+  <!-- Left merge -->
+  <line x1="200" y1="492" x2="200" y2="560" stroke="#4a4f6a" stroke-width="2"/>
+  <line x1="200" y1="560" x2="385" y2="560" stroke="#4a4f6a" stroke-width="2"/>
+  <polygon points="388,560 378,555 378,565" fill="#4a4f6a"/>
+
+  <!-- Right merge -->
+  <line x1="700" y1="508" x2="700" y2="560" stroke="#4a4f6a" stroke-width="2"/>
+  <line x1="700" y1="560" x2="515" y2="560" stroke="#4a4f6a" stroke-width="2"/>
+  <polygon points="512,560 522,555 522,565" fill="#4a4f6a"/>
+
+  <!-- ══════════ ROW 4: Frontend ══════════ -->
+  <rect x="280" y="540" width="340" height="60" rx="10" fill="#1a1f2e" stroke="#facc15" stroke-width="2"/>
+  <text x="450" y="562" text-anchor="middle" fill="#facc15" font-size="11" font-weight="700" letter-spacing="1">REACT FRONTEND</text>
+  <text x="450" y="582" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="600">Results Display + Scale Bar Tool</text>
+  <text x="450" y="596" text-anchor="middle" fill="#94a3b8" font-size="11">Corroded area  •  Max/mean depth  •  KDE chart</text>
+
+  <!-- Arrow to PDF -->
+  <line x1="450" y1="600" x2="450" y2="634" stroke="#4a4f6a" stroke-width="2"/>
+  <polygon points="450,640 444,630 456,630" fill="#4a4f6a"/>
+
+  <!-- ══════════ ROW 5: PDF ══════════ -->
+  <rect x="320" y="644" width="260" height="28" rx="8" fill="#1a1f2e" stroke="#60a5fa" stroke-width="1.5"/>
+  <text x="450" y="663" text-anchor="middle" fill="#60a5fa" font-size="13" font-weight="600">PDF Report Export</text>
+
+  <!-- Labels on fork lines -->
+  <text x="233" y="200" fill="#4a4f6a" font-size="11">ML track</text>
+  <text x="630" y="200" fill="#4a4f6a" font-size="11">CV track</text>
+
+</svg>
